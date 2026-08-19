@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Check-in">
+<meta name="theme-color" content="#0a0e14">
+<title>Check-in</title>
+<style>
+  :root {
+    --bg: #0a0e14;
+    --panel: #121824;
+    --line: #1e2836;
+    --ink: #e8edf4;
+    --dim: #6b7688;
+    --calm: #4fd1a5;
+    --calm-deep: #2a8f72;
+    --alert: #ff5a52;
+    --alert-deep: #b3322c;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: background 0.6s ease;
+  }
+  body.alarming { background: #1a0806; }
+
+  .wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 24px 22px 32px;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-top: 8px;
+  }
+  .brand {
+    font-size: 14px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--dim);
+    font-weight: 600;
+  }
+  .dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--calm);
+    box-shadow: 0 0 12px var(--calm);
+    transition: background 0.4s, box-shadow 0.4s;
+  }
+  body.alarming .dot { background: var(--alert); box-shadow: 0 0 14px var(--alert); animation: blink 0.8s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0.2; } }
+
+  .center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .ring-wrap { position: relative; width: 280px; max-width: 74vw; aspect-ratio: 1; }
+  svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .track { fill: none; stroke: var(--line); stroke-width: 6; }
+  .prog {
+    fill: none; stroke: var(--calm); stroke-width: 6; stroke-linecap: round;
+    transition: stroke-dashoffset 1s linear, stroke 0.5s;
+  }
+  body.alarming .prog { stroke: var(--alert); }
+
+  .readout {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 4px;
+  }
+  .time {
+    font-size: 58px; font-weight: 300; letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .time-label { font-size: 13px; color: var(--dim); letter-spacing: 0.14em; text-transform: uppercase; }
+
+  .status {
+    text-align: center;
+    font-size: 15px;
+    color: var(--dim);
+    min-height: 22px;
+    margin-top: 4px;
+    padding: 0 20px;
+  }
+  body.alarming .status { color: var(--alert); font-weight: 500; }
+
+  .controls { display: flex; flex-direction: column; gap: 14px; }
+
+  .btn {
+    border: none; border-radius: 18px;
+    font-family: inherit; font-size: 18px; font-weight: 600;
+    padding: 20px; width: 100%; cursor: pointer;
+    letter-spacing: 0.02em;
+    transition: transform 0.1s, opacity 0.2s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primary { background: var(--calm); color: #04140e; }
+  .btn-ok {
+    background: var(--alert); color: #fff;
+    font-size: 22px; padding: 26px;
+    box-shadow: 0 0 30px rgba(255,90,82,0.4);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse { 50% { box-shadow: 0 0 46px rgba(255,90,82,0.7); } }
+  .btn-ghost {
+    background: transparent; color: var(--dim);
+    border: 1px solid var(--line);
+    font-size: 15px; padding: 15px;
+  }
+
+  .setup { display: flex; flex-direction: column; gap: 20px; }
+  .field-label { font-size: 13px; color: var(--dim); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 10px; text-align: center; }
+  .chips { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .chip {
+    background: var(--panel); border: 1px solid var(--line);
+    color: var(--ink); border-radius: 14px;
+    padding: 14px 18px; font-family: inherit; font-size: 16px; font-weight: 500;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .chip:active { transform: scale(0.96); }
+  .chip.on { background: var(--calm); color: #04140e; border-color: var(--calm); }
+
+  .hint {
+    font-size: 13px; color: var(--dim); text-align: center;
+    line-height: 1.5; padding: 0 10px;
+  }
+  .hint a { color: var(--calm); text-decoration: none; }
+
+  .hide { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <span class="brand">Check-in</span>
+    <span class="dot"></span>
+  </header>
+
+  <div class="center">
+    <!-- SETUP -->
+    <div class="setup" id="setup">
+      <div>
+        <div class="field-label">Me redemander toutes les</div>
+        <div class="chips" id="intervalChips">
+          <button class="chip" data-min="20">20 min</button>
+          <button class="chip on" data-min="30">30 min</button>
+          <button class="chip" data-min="60">1 h</button>
+          <button class="chip" data-min="120">2 h</button>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="startBtn">Démarrer</button>
+      <p class="hint">Le minuteur te demandera « ça va ? » à intervalle régulier. Si tu ne réponds pas, une sonnerie se déclenche.<br>Garde l'écran ouvert pour que ça marche.</p>
+    </div>
+
+    <!-- RUNNING -->
+    <div class="ring-wrap hide" id="ringWrap">
+      <svg viewBox="0 0 200 200">
+        <circle class="track" cx="100" cy="100" r="92"></circle>
+        <circle class="prog" cx="100" cy="100" r="92" id="prog"></circle>
+      </svg>
+      <div class="readout">
+        <div class="time" id="time">30:00</div>
+        <div class="time-label" id="timeLabel">avant check-in</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status hide" id="status"></div>
+
+  <div class="controls">
+    <button class="btn btn-ok hide" id="okBtn">Je vais bien ✓</button>
+    <button class="btn btn-ghost hide" id="stopBtn">Arrêter</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var CIRC = 2 * Math.PI * 92;
+  var prog = document.getElementById('prog');
+  prog.style.strokeDasharray = CIRC;
+  prog.style.strokeDashoffset = 0;
+
+  var setup = document.getElementById('setup');
+  var ringWrap = document.getElementById('ringWrap');
+  var timeEl = document.getElementById('time');
+  var timeLabel = document.getElementById('timeLabel');
+  var statusEl = document.getElementById('status');
+  var startBtn = document.getElementById('startBtn');
+  var okBtn = document.getElementById('okBtn');
+  var stopBtn = document.getElementById('stopBtn');
+  var chips = document.getElementById('intervalChips');
+
+  var intervalMin = 30;
+  var total = intervalMin * 60;
+  var remaining = total;
+  var ticker = null;
+  var alarming = false;
+  var audioCtx = null;
+  var alarmOsc = null;
+  var alarmGain = null;
+  var wakeLock = null;
+  var checkins = 0;
+
+  chips.addEventListener('click', function (e) {
+    var b = e.target.closest('.chip');
+    if (!b) return;
+    [].forEach.call(chips.children, function (c) { c.classList.remove('on'); });
+    b.classList.add('on');
+    intervalMin = parseInt(b.dataset.min, 10);
+  });
+
+  function fmt(s) {
+    var m = Math.floor(s / 60);
+    var sec = s % 60;
+    return m + ':' + (sec < 10 ? '0' : '') + sec;
+  }
+
+  function ensureAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  // silent keep-alive blip so iOS keeps the audio context warm
+  function warmBlip() {
+    if (!audioCtx) return;
+    var o = audioCtx.createOscillator();
+    var g = audioCtx.createGain();
+    g.gain.value = 0.0001;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + 0.05);
+  }
+
+  async function requestWake() {
+    try {
+      if ('wakeLock' in navigator) {
+        wakeLock = await navigator.wakeLock.request('screen');
+        wakeLock.addEventListener('release', function(){});
+      }
+    } catch (e) {}
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && wakeLock === null) requestWake();
+  });
+
+  function startAlarm() {
+    alarming = true;
+    document.body.classList.add('alarming');
+    ensureAudio();
+    okBtn.classList.remove('hide');
+    stopBtn.classList.add('hide');
+    timeLabel.textContent = 'réponds';
+    timeEl.textContent = '00:00';
+    statusEl.classList.remove('hide');
+    statusEl.textContent = 'Tape « Je vais bien » pour couper la sonnerie';
+
+    alarmOsc = audioCtx.createOscillator();
+    alarmGain = audioCtx.createGain();
+    alarmOsc.type = 'sine';
+    alarmOsc.connect(alarmGain);
+    alarmGain.connect(audioCtx.destination);
+    alarmGain.gain.value = 0.001;
+    alarmOsc.start();
+
+    var t = audioCtx.currentTime;
+    // warble between two tones, repeating
+    scheduleWarble();
+    rampVolume();
+
+    if (navigator.vibrate) {
+      vibrateLoop();
+    }
+  }
+
+  var warbleTimer = null;
+  function scheduleWarble() {
+    var hi = 880, lo = 620, on = false;
+    warbleTimer = setInterval(function () {
+      if (!alarming || !alarmOsc) return;
+      on = !on;
+      alarmOsc.frequency.setValueAtTime(on ? hi : lo, audioCtx.currentTime);
+    }, 400);
+  }
+  function rampVolume() {
+    if (!alarmGain) return;
+    var now = audioCtx.currentTime;
+    alarmGain.gain.cancelScheduledValues(now);
+    alarmGain.gain.setValueAtTime(0.001, now);
+    alarmGain.gain.exponentialRampToValueAtTime(0.3, now + 1.5);
+  }
+  var vibTimer = null;
+  function vibrateLoop() {
+    navigator.vibrate([400, 200, 400]);
+    vibTimer = setInterval(function () {
+      if (alarming) navigator.vibrate([400, 200, 400]);
+    }, 1400);
+  }
+
+  function stopAlarm() {
+    alarming = false;
+    document.body.classList.remove('alarming');
+    if (warbleTimer) { clearInterval(warbleTimer); warbleTimer = null; }
+    if (vibTimer) { clearInterval(vibTimer); vibTimer = null; }
+    if (navigator.vibrate) navigator.vibrate(0);
+    if (alarmGain && audioCtx) {
+      var now = audioCtx.currentTime;
+      alarmGain.gain.cancelScheduledValues(now);
+      alarmGain.gain.setValueAtTime(alarmGain.gain.value, now);
+      alarmGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.3);
+    }
+    if (alarmOsc) {
+      try { alarmOsc.stop(audioCtx.currentTime + 0.35); } catch (e) {}
+      alarmOsc = null;
+    }
+  }
+
+  function tick() {
+    remaining--;
+    if (remaining <= 0) {
+      remaining = 0;
+      timeEl.textContent = fmt(0);
+      prog.style.strokeDashoffset = CIRC;
+      clearInterval(ticker); ticker = null;
+      startAlarm();
+      return;
+    }
+    timeEl.textContent = fmt(remaining);
+    prog.style.strokeDashoffset = CIRC * (1 - remaining / total);
+    if (remaining % 25 === 0) warmBlip();
+  }
+
+  function beginCountdown() {
+    total = intervalMin * 60;
+    remaining = total;
+    timeEl.textContent = fmt(remaining);
+    timeLabel.textContent = 'avant check-in';
+    prog.style.strokeDashoffset = 0;
+    okBtn.classList.add('hide');
+    stopBtn.classList.remove('hide');
+    if (checkins > 0) {
+      statusEl.classList.remove('hide');
+      statusEl.textContent = 'Bien reçu. À dans ' + intervalMin + ' min 👍';
+    }
+    if (ticker) clearInterval(ticker);
+    ticker = setInterval(tick, 1000);
+  }
+
+  startBtn.addEventListener('click', function () {
+    ensureAudio();
+    warmBlip();
+    requestWake();
+    setup.classList.add('hide');
+    ringWrap.classList.remove('hide');
+    beginCountdown();
+  });
+
+  okBtn.addEventListener('click', function () {
+    stopAlarm();
+    checkins++;
+    beginCountdown();
+  });
+
+  stopBtn.addEventListener('click', function () {
+    if (ticker) { clearInterval(ticker); ticker = null; }
+    stopAlarm();
+    ringWrap.classList.add('hide');
+    setup.classList.remove('hide');
+    stopBtn.classList.add('hide');
+    okBtn.classList.add('hide');
+    statusEl.classList.add('hide');
+    checkins = 0;
+    if (wakeLock) { try { wakeLock.release(); } catch(e){} wakeLock = null; }
+  });
+})();
+</script>
+</body>
+</html>
